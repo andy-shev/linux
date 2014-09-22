@@ -1,0 +1,14 @@
+config INTEL_PSH_IPC
+	bool "Intel PSH IPC Support"
+	help
+	  PSH (Platform Services Hub) is a low frequency IA core on Intel Tangier platform,
+	  whose power consumption is quite low. PSH runs RTOS software inside itself,
+	  which independently controls and collects sensor data, pre-processes the data,
+	  and communicates with Intel Atom. Thus Intel Atom side could be put into low power mode
+	  with more time, while all the sensor data are collected without any loss.
+
+	  PSH IPC is used as a bridge for OS sensor service to control and access PSH
+	  sensors communications between kernel and PSH. This is not needed for PC-type
+	  machines.
+
+	  Say Y here to get Intel PSH IPC support.
