@@ -39,6 +39,7 @@ struct uart_8250_dma {
 	dma_cookie_t		tx_cookie;
 
 	void			*rx_buf;
+	void			*tx_buf;
 
 	size_t			rx_size;
 	size_t			tx_size;
