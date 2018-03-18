@@ -88,6 +88,8 @@ static int tng_handle_irq(struct uart_port *p)
 	err = hsu_dma_get_status(chip, mid->dma_index * 2 + 1, &status);
 	if (err > 0) {
 		serial8250_rx_dma_flush(up);
+		/* Immediately after flushing arm DMA again */
+		if (up->dma) up->dma->rx_dma(up);
 		ret |= 1;
 	} else if (err == 0)
 		ret |= hsu_dma_do_irq(chip, mid->dma_index * 2 + 1, status);
@@ -232,6 +234,31 @@ static void mid8250_set_termios(struct uart_port *p,
 	serial8250_do_set_termios(p, termios, old);
 }
 
+static int mid8250_startup(struct uart_port *port)
+{
+	struct uart_8250_port *up = up_to_u8250p(port);
+	struct mid8250 *mid = port->private_data;
+	int ret;
+
+	ret = serial8250_do_startup(port);
+	
+	/* Arm Rx DMA at ->startup() time */
+
+	if (up->dma) up->dma->rx_dma(up);
+
+	return ret;
+}
+
+static void mid8250_shutdown(struct uart_port *port)
+{
+	struct uart_8250_port *up = up_to_u8250p(port);
+	struct mid8250 *mid = port->private_data;
+
+	if (up->dma) serial8250_rx_dma_flush(up);
+
+	serial8250_do_shutdown(port);
+}
+
 static bool mid8250_dma_filter(struct dma_chan *chan, void *param)
 {
 	struct hsu_dma_slave *s = param;
@@ -306,6 +333,8 @@ static int mid8250_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	uart.port.uartclk = mid->board->base_baud * 16;
 	uart.port.flags = UPF_SHARE_IRQ | UPF_FIXED_PORT | UPF_FIXED_TYPE;
 	uart.port.set_termios = mid8250_set_termios;
+	uart.port.startup = mid8250_startup;
+	uart.port.shutdown = mid8250_shutdown;
 
 	uart.port.mapbase = pci_resource_start(pdev, bar);
 	uart.port.membase = pcim_iomap(pdev, bar, 0);
