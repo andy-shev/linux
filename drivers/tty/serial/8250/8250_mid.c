@@ -7,6 +7,7 @@
  */
 
 #include <linux/bitops.h>
+#include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/rational.h>
@@ -83,6 +84,12 @@ static int tng_handle_irq(struct uart_port *p)
 	int err;
 
 	chip = pci_get_drvdata(mid->dma_dev);
+
+        /* Toggle IO7 pin which corresponds to GP48*/
+	if(gpio_is_valid(48)) {
+		gpio_set_value(48, 1);
+		gpio_set_value(48, 0);
+	};
 
 	/* Rx DMA */
 	err = hsu_dma_get_status(chip, mid->dma_index * 2 + 1, &status);
@@ -246,6 +253,10 @@ static int mid8250_startup(struct uart_port *port)
 
 	if (up->dma) up->dma->rx_dma(up);
 
+	/* allocate IO7 pin to toggle */
+	gpio_request(48, "ttyS0-2 INT");
+	gpio_direction_output(48, 0);
+
 	return ret;
 }
 
@@ -255,6 +266,8 @@ static void mid8250_shutdown(struct uart_port *port)
 	struct mid8250 *mid = port->private_data;
 
 	if (up->dma) serial8250_rx_dma_flush(up);
+
+	gpio_free(48);
 
 	serial8250_do_shutdown(port);
 }
