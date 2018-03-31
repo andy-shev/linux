@@ -107,7 +107,7 @@ static int hsu_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	ret = request_irq(chip->irq, hsu_pci_irq, 0, "hsu_dma_pci", chip);
 	if (ret)
 		goto err_register_irq;
-
+	disable_irq_nosync(chip->irq);
 	pci_set_drvdata(pdev, chip);
 
 	return 0;
