@@ -13,6 +13,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/spinlock.h>
 
+#include <asm/intel_scu_ipc.h>
 #include <asm/set_memory.h>
 
 #include <acpi/video.h>
@@ -220,6 +221,10 @@ static int psb_driver_load(struct drm_device *dev, unsigned long flags)
 	dev_priv = kzalloc(sizeof(*dev_priv), GFP_KERNEL);
 	if (dev_priv == NULL)
 		return -ENOMEM;
+
+	dev_priv->scu = devm_intel_scu_ipc_dev_get(&dev->pdev->dev);
+	if (!dev_priv->scu)
+		return -EPROBE_DEFER;
 
 	dev_priv->ops = (struct psb_ops *)flags;
 	dev_priv->dev = dev;
