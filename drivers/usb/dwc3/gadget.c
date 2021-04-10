@@ -2486,7 +2486,7 @@ static void dwc3_gadget_config_params(struct usb_gadget *g,
 		 * recommended BESL baseline to 1 and clamp the BESL deep to be
 		 * within 2 to 15.
 		 */
-		params->besl_baseline = 1;
+		params->besl_baseline = 6;
 		if (dwc->is_utmi_l1_suspend)
 			params->besl_deep =
 				clamp_t(u8, dwc->hird_threshold, 2, 15);
