@@ -60,9 +60,12 @@ static void __dma_rx_complete(struct uart_8250_port *p, struct uart_8250_dma *dm
 int serial8250_tx_dma(struct uart_8250_port *p)
 {
 	struct uart_8250_dma		*dma = p->dma;
+	struct scatterlist 		*sgl = dma->tx_sgl;
 	struct circ_buf			*xmit = &p->port.state->xmit;
 	struct dma_async_tx_descriptor	*desc;
 	int ret;
+	size_t				chunk1, chunk2;
+	int				head, tail;
 
 	if (dma->tx_running)
 		return 0;
@@ -73,12 +76,28 @@ int serial8250_tx_dma(struct uart_8250_port *p)
 		return 0;
 	}
 
-	dma->tx_size = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
+	head = READ_ONCE(xmit->head);
+	tail = READ_ONCE(xmit->tail);
+	dma->dma_tx_nents = 1;
+	chunk1 = CIRC_CNT_TO_END(head, tail, UART_XMIT_SIZE);
+	chunk2 = CIRC_CNT(head, tail, UART_XMIT_SIZE) - chunk1;
+	if (chunk2 == 0) {
+		sg_init_one(sgl, xmit->buf + tail, chunk1);
+	} else {
+		dma->dma_tx_nents++;
+		sg_init_table(sgl, dma->dma_tx_nents);
+		sg_set_buf(&sgl[0], xmit->buf + tail, chunk1);
+		sg_set_buf(&sgl[1], xmit->buf, chunk2);
+		sg_dma_address(&sgl[1]) = dma->tx_addr;
+		sg_dma_len(&sgl[1]) = chunk2;
+	}
+	sg_dma_address(&sgl[0]) = dma->tx_addr + tail;
+	sg_dma_len(&sgl[0]) = chunk1;
+	dma->tx_size = chunk1 + chunk2;
 
-	desc = dmaengine_prep_slave_single(dma->txchan,
-					   dma->tx_addr + xmit->tail,
-					   dma->tx_size, DMA_MEM_TO_DEV,
-					   DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	desc = dmaengine_prep_slave_sg(dma->txchan, sgl, dma->dma_tx_nents,
+				       DMA_MEM_TO_DEV,
+				       DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
 	if (!desc) {
 		ret = -EBUSY;
 		goto err;
