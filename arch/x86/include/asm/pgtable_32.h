@@ -56,7 +56,7 @@ do {						\
  * With PAE paging (PTRS_PER_PMD > 1), we allocate PTRS_PER_PGD == 4 pages for
  * the PMD's in addition to the pages required for the last level pagetables.
  */
-#if PTRS_PER_PMD > 1
+#if defined(PTRS_PER_PMD) && (PTRS_PER_PMD > 1)
 #define PAGE_TABLE_SIZE(pages) (((pages) / PTRS_PER_PMD) + PTRS_PER_PGD)
 #else
 #define PAGE_TABLE_SIZE(pages) ((pages) / PTRS_PER_PGD)
