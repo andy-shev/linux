@@ -1,3 +1,13 @@
+config INTEL_MCU
+	tristate "Intel generic MCU control interface"
+	depends on INTEL_PSH_IPC
+	help
+	  Say Y here to enable control interface for intel mcu
+
+	  This driver provide userspace tty interface for the control and
+	  message output.
+	  You could use normal read/write to complete those operation.
+
 config INTEL_PSH_IPC
 	bool "Intel PSH IPC Support"
 	help
